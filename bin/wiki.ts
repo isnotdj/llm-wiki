@@ -61,7 +61,8 @@ async function main() {
     .command('list')
     .description('List wiki items')
     .argument('[type]', 'raw / pages / orphans / backlinks', 'pages')
-    .action((type, options) => listCmd(config, type, options));
+    .argument('[target]', 'Target page for backlinks (optional)', '')
+    .action((type, target, options) => listCmd(config, type, target, options));
 
   program.parseAsync(process.argv);
 }
