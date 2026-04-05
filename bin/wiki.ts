@@ -49,6 +49,7 @@ async function main() {
     .option('--save', 'Save answer without asking')
     .option('--page <name>', 'Name of the saved page')
     .option('--no-save', 'Do not save answer')
+    .option('-d, --debug', 'Print debug context info (e.g., accessed pages)')
     .action((question, options) => queryCmd(config, question, options));
 
   program

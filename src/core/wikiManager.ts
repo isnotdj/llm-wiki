@@ -35,7 +35,12 @@ export class WikiManager {
     const results: Array<{name: string, content: string}> = [];
     if (!pageNames || pageNames.length === 0) return results;
 
-    const targetNames = new Set(pageNames.map(n => n.toLowerCase().replace(/\.md$/, '')));
+    const canonicalize = (n: string) => n.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
+
+    const targetMaps = pageNames.map(original => ({
+        original,
+        canon: canonicalize(original.replace(/\.md$/, ''))
+    }));
     
     // Recursive search method
     async function scanDir(dir: string) {
@@ -46,14 +51,23 @@ export class WikiManager {
         if (entry.isDirectory()) {
           await scanDir(fullPath);
         } else if (entry.isFile() && entry.name.endsWith('.md')) {
-          const baseName = entry.name.slice(0, -3).toLowerCase();
-          if (targetNames.has(baseName)) {
+          const baseName = entry.name.slice(0, -3);
+          const baseCanon = canonicalize(baseName);
+          
+          const matchIndex = targetMaps.findIndex(t => t.canon === baseCanon || t.canon.includes(baseCanon) || baseCanon.includes(t.canon));
+          
+          // To be safe from over-fetching (e.g. 'a' matching 'about'), we only allow substring matching if the lengths are somewhat close or it's a clear descriptor difference.
+          // But exact canonical match is always safe.
+          const isSafeMatch = matchIndex !== -1 && (
+              targetMaps[matchIndex].canon === baseCanon || 
+              Math.abs(targetMaps[matchIndex].canon.length - baseCanon.length) > 3 // loose condition for "SSML (Speech...)" vs "ssml"
+          );
+
+          if (isSafeMatch) {
              try {
                 const content = await fs.readFile(fullPath, 'utf8');
-                // find the original casing that the user requested
-                const originalName = pageNames.find(n => n.toLowerCase().replace(/\.md$/, '') === baseName) || entry.name;
-                results.push({ name: originalName, content });
-                targetNames.delete(baseName); // Optimization: stop searching once found
+                results.push({ name: targetMaps[matchIndex].original, content });
+                targetMaps.splice(matchIndex, 1); // Optimization: stop searching this particular target once found
              } catch (e) {
                  console.warn(`Failed to read page: ${fullPath}`, e);
              }

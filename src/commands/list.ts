@@ -19,6 +19,10 @@ async function scanMdFiles(dir: string): Promise<string[]> {
   return results;
 }
 
+function canonicalize(name: string): string {
+    return name.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
+}
+
 export default async function listCmd(config: Config, type: string, target: string, options: any) {
   const wikiDir = path.join(config.wikiRoot, config.paths.wiki);
   const rawUntrackedDir = path.join(config.wikiRoot, config.paths.raw, 'untracked');
@@ -57,8 +61,11 @@ export default async function listCmd(config: Config, type: string, target: stri
       const allWikiFiles = await scanMdFiles(wikiDir);
       const pageFiles = allWikiFiles.filter(f => !['index.md', 'log.md'].includes(path.basename(f)));
       
-      const pageNames = pageFiles.map(f => path.basename(f, '.md'));
-      const orphans = new Set(pageNames);
+      const pageInfo = pageFiles.map(f => { 
+         const name = path.basename(f, '.md');
+         return { name, canon: canonicalize(name) };
+      });
+      const orphans = new Set(pageInfo.map(i => i.name));
 
       // Scan content of index and all wiki pages
       const allContentFiles = [path.join(wikiDir, 'index.md'), ...pageFiles];
@@ -70,7 +77,12 @@ export default async function listCmd(config: Config, type: string, target: stri
         // Match standard [[Links]]
         const matches = [...content.matchAll(/\[\[(.*?)\]\]/g)];
         for (const match of matches) {
-           orphans.delete(match[1].trim());
+           const linkedCanon = canonicalize(match[1]);
+           // Find any page whose canonical name matches the link's canonical name
+           const pInfo = pageInfo.find(i => i.canon === linkedCanon || linkedCanon.includes(i.canon));
+           if (pInfo) {
+              orphans.delete(pInfo.name);
+           }
         }
       }
 
@@ -91,14 +103,21 @@ export default async function listCmd(config: Config, type: string, target: stri
        }
        console.log(chalk.bold.cyan(`\n--- Backlinks for "[[${target}]]" ---`));
        
+       const targetCanon = canonicalize(target);
        const allWikiFiles = await scanMdFiles(wikiDir);
        let found = 0;
 
        for (const file of allWikiFiles) {
           if (!(await fs.pathExists(file))) continue;
           const content = await fs.readFile(file, 'utf8');
-          // simple check for link
-          if (content.includes(`[[${target}]]`)) {
+          const matches = [...content.matchAll(/\[\[(.*?)\]\]/g)];
+          
+          const hasLink = matches.some(match => {
+              const linkedCanon = canonicalize(match[1]);
+              return linkedCanon === targetCanon || linkedCanon.includes(targetCanon);
+          });
+
+          if (hasLink) {
              console.log(`  🔗 ${chalk.green(path.basename(file, '.md'))}`);
              found++;
           }

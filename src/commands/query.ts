@@ -8,7 +8,7 @@ import { PromptBuilder } from '../core/promptBuilder.ts';
 import { WikiManager } from '../core/wikiManager.ts';
 import type { Config } from '../types/index.ts';
 
-export default async function queryCmd(config: Config, question: string | undefined, options: { save?: boolean, page?: string, noSave?: boolean }) {
+export default async function queryCmd(config: Config, question: string | undefined, options: { save?: boolean, page?: string, noSave?: boolean, debug?: boolean }) {
   let finalQuestion = question;
   
   if (!finalQuestion) {
@@ -54,6 +54,19 @@ export default async function queryCmd(config: Config, question: string | undefi
 
   const pages = await wm.getPageContents(pagesToRead);
   
+  if (options.debug) {
+    console.log(chalk.magenta('\n[DEBUG] LLM Router requested the following links based on index.md:'));
+    if (pagesToRead.length === 0) console.log(chalk.gray('  (None)'));
+    pagesToRead.forEach(p => console.log(chalk.gray(`  - ${p}`)));
+    
+    console.log(chalk.magenta('[DEBUG] Local code successfully resolved and loaded these files:'));
+    if (pages.length === 0) console.log(chalk.gray('  (None)'));
+    pages.forEach(p => {
+       console.log(chalk.gray(`  - ${p.name} (${p.content.length} characters)`));
+    });
+    console.log('');
+  }
+
   const answerSpinner = ora('Synthesizing answer...').start();
   let answerContent = '';
   try {
