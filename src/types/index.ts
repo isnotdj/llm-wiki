@@ -7,10 +7,6 @@ export interface Config {
     baseUrl?: string;
     temperature: number;
   };
-  ingest: {
-    autoCommit: boolean;
-    reviewChanges: boolean;
-  };
   paths: {
     raw: string;
     wiki: string;

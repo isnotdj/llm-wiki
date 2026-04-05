@@ -41,6 +41,9 @@ importers:
       unified:
         specifier: ^11.0.5
         version: 11.0.5
+      yaml:
+        specifier: ^2.8.3
+        version: 2.8.3
     devDependencies:
       '@types/fs-extra':
         specifier: ^11.0.4
@@ -604,6 +607,11 @@ packages:
 
   wordwrap@1.0.0:
     resolution: {integrity: sha512-gvVzJFlPycKc5dZN4yPkP8w7Dc37BtP1yczEneOb4uq34pXZcvrtRTmWV8W+Ume+XCxKgbjM+nevkyFPMybd4Q==}
+
+  yaml@2.8.3:
+    resolution: {integrity: sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
 
   yoctocolors@2.1.2:
     resolution: {integrity: sha512-CzhO+pFNo8ajLM2d2IW/R93ipy99LWjtwblvC1RsoSUMZgyLbYFr221TnSNT7GjGdYui6P459mw9JH/g/zW2ug==}
@@ -1231,6 +1239,8 @@ snapshots:
       vfile-message: 4.0.3
 
   wordwrap@1.0.0: {}
+
+  yaml@2.8.3: {}
 
   yoctocolors@2.1.2: {}
 

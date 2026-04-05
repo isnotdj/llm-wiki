@@ -7,10 +7,6 @@ export const defaultConfig: Config = {
     model: 'gpt-4o',
     temperature: 0.3,
   },
-  ingest: {
-    autoCommit: false,
-    reviewChanges: true,
-  },
   paths: {
     raw: 'raw',
     wiki: 'wiki',
