@@ -1,6 +1,6 @@
 {
   "name": "llm-wiki",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An LLM-powered personal wiki CLI. Incrementally build and query a persistent, interlinked wiki from your raw sources.",
   "type": "module",
   "bin": {
