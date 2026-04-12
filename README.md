@@ -65,6 +65,7 @@ llm:
   model: gpt-4o
   apiKey: YOUR_API_KEY_HERE
   baseUrl: https://api.openai.com/v1  # Change for proxies or other providers
+  maxTokens: 4096
   temperature: 0.3
   thinking:
     type: disabled  # Set to 'enabled' for reasoning models (e.g. o1, o3)
@@ -73,9 +74,24 @@ llm:
 **Using DeepSeek / other providers:**
 ```yaml
 llm:
+  provider: openai
   model: deepseek-chat
   apiKey: YOUR_DEEPSEEK_KEY
   baseUrl: https://api.deepseek.com/v1
+```
+
+**Using Anthropic native API:**
+```yaml
+llm:
+  provider: anthropic
+  model: claude-sonnet-4-5
+  apiKey: YOUR_ANTHROPIC_KEY
+  baseUrl: https://api.anthropic.com
+  apiVersion: 2023-06-01
+  maxTokens: 4096
+  temperature: 0.3
+  thinking:
+    type: disabled
 ```
 
 ---

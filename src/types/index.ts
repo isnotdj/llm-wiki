@@ -1,10 +1,12 @@
 export interface Config {
   wikiRoot: string;
   llm: {
-    provider: 'openai';
+    provider: 'openai' | 'anthropic';
     model: string;
     apiKey?: string;
     baseUrl?: string;
+    apiVersion?: string;
+    maxTokens?: number;
     temperature: number;
     thinking?: {
       type: 'disabled' | 'enabled';
