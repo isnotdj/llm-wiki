@@ -3,7 +3,13 @@ import fs from 'fs-extra';
 import path from 'path';
 import { LLMClient } from './llmClient.ts';
 import { PromptBuilder } from './promptBuilder.ts';
-import { StateStore, type ConceptStateRecord, type SourceStateRecord, type TrackedConceptRef } from './stateStore.ts';
+import {
+  StateStore,
+  type ConceptStateRecord,
+  type EntityStateRecord,
+  type SourceStateRecord,
+  type TrackedConceptRef,
+} from './stateStore.ts';
 import { parseJsonResponse } from './jsonUtils.ts';
 import { safeWriteFile } from './fileOps.ts';
 import type { Config } from '../types/index.ts';
@@ -16,10 +22,16 @@ export interface WorkflowOptions {
 interface SourceRefreshPlan {
   sourceContent: string;
   concepts: Array<{ id: string; title: string }>;
+  entities?: Array<{ id: string; title: string }>;
   logMessage?: string;
 }
 
 interface ConceptRebuildPlan {
+  content: string;
+  logMessage?: string;
+}
+
+interface EntityRebuildPlan {
   content: string;
   logMessage?: string;
 }
@@ -32,13 +44,23 @@ export interface RebuildConceptResult {
   changed: boolean;
 }
 
+export interface RebuildEntityResult {
+  entityId: string;
+  title: string;
+  entityPagePath: string;
+  sourceIds: string[];
+  changed: boolean;
+}
+
 export interface RefreshSourceResult {
   sourceId: string;
   rawPath: string;
   sourcePagePath: string;
   changed: boolean;
   affectedConceptIds: string[];
+  affectedEntityIds: string[];
   rebuiltConcepts: RebuildConceptResult[];
+  rebuiltEntities: RebuildEntityResult[];
 }
 
 export function computeContentHash(content: string): string {
@@ -85,6 +107,10 @@ export function deriveConceptPagePath(conceptId: string): string {
   return path.posix.join('wiki', 'concepts', `${conceptId}.md`);
 }
 
+export function deriveEntityPagePath(entityId: string): string {
+  return path.posix.join('wiki', 'entities', `${entityId}.md`);
+}
+
 export async function refreshTrackedSource(
   config: Config,
   sourceRelativePath: string,
@@ -105,9 +131,10 @@ export async function refreshTrackedSource(
   const sourceId = rawTrackedPath;
   const sourcePagePath = deriveSourcePagePath(sourceRelativePath);
 
-  const [sourcesState, conceptsState, indexContent] = await Promise.all([
+  const [sourcesState, conceptsState, entitiesState, indexContent] = await Promise.all([
     stateStore.loadSources(),
     stateStore.loadConcepts(),
+    stateStore.loadEntities(),
     readIndexContent(config),
   ]);
 
@@ -120,7 +147,9 @@ export async function refreshTrackedSource(
       sourcePagePath,
       changed: false,
       affectedConceptIds: [],
+      affectedEntityIds: [],
       rebuiltConcepts: [],
+      rebuiltEntities: [],
     };
   }
 
@@ -144,9 +173,15 @@ export async function refreshTrackedSource(
 
   const parsed = parseJsonResponse<SourceRefreshPlan>(response);
   const normalizedConcepts = normalizeConceptRefs(parsed.concepts || []);
+  const normalizedEntities = normalizeConceptRefs(parsed.entities || []);
   const affectedConceptIds = new Set<string>([
     ...previousConceptIds,
     ...normalizedConcepts.map(concept => concept.id),
+  ]);
+  const previousEntityIds = previousState?.declaredEntities?.map(entity => entity.id) || [];
+  const affectedEntityIds = new Set<string>([
+    ...previousEntityIds,
+    ...normalizedEntities.map(entity => entity.id),
   ]);
 
   if (!options.dryRun) {
@@ -161,16 +196,20 @@ export async function refreshTrackedSource(
       lastRefreshAt: new Date().toISOString(),
       lastTransactionId: transactionId,
       declaredConcepts: normalizedConcepts,
+      declaredEntities: normalizedEntities,
     };
 
     syncConceptMembership(conceptsState, sourceId, normalizedConcepts);
+    syncEntityMembership(entitiesState, sourceId, normalizedEntities);
     await Promise.all([
       stateStore.saveSources(sourcesState),
       stateStore.saveConcepts(conceptsState),
+      stateStore.saveEntities(entitiesState),
     ]);
   }
 
   const rebuiltConcepts: RebuildConceptResult[] = [];
+  const rebuiltEntities: RebuildEntityResult[] = [];
   if (options.cascade) {
     for (const conceptId of Array.from(affectedConceptIds).sort()) {
       if (!conceptsState[conceptId] || conceptsState[conceptId].sourceIds.length === 0) {
@@ -196,6 +235,31 @@ export async function refreshTrackedSource(
       );
       rebuiltConcepts.push(result);
     }
+
+    for (const entityId of Array.from(affectedEntityIds).sort()) {
+      if (!entitiesState[entityId] || entitiesState[entityId].sourceIds.length === 0) {
+        const deleted = await removeEntityIfUnowned(config, entityId, options.dryRun);
+        rebuiltEntities.push({
+          entityId,
+          title: entityId,
+          entityPagePath: deriveEntityPagePath(entityId),
+          sourceIds: [],
+          changed: deleted,
+        });
+        continue;
+      }
+      const result = await rebuildEntity(
+        config,
+        entityId,
+        {
+          ...options,
+          entitiesState,
+          sourcesState,
+          sourceIdHint: sourceId,
+        }
+      );
+      rebuiltEntities.push(result);
+    }
   }
 
   if (!options.dryRun) {
@@ -208,7 +272,9 @@ export async function refreshTrackedSource(
     sourcePagePath,
     changed: true,
     affectedConceptIds: Array.from(affectedConceptIds).sort(),
+    affectedEntityIds: Array.from(affectedEntityIds).sort(),
     rebuiltConcepts,
+    rebuiltEntities,
   };
 }
 
@@ -298,6 +364,92 @@ export async function rebuildConcept(
   };
 }
 
+export async function rebuildEntity(
+  config: Config,
+  entityId: string,
+  options: WorkflowOptions & {
+    entitiesState?: Record<string, EntityStateRecord>;
+    sourcesState?: Record<string, SourceStateRecord>;
+    sourceIdHint?: string;
+  } = {}
+): Promise<RebuildEntityResult> {
+  const normalizedEntityId = sanitizeConceptId(entityId);
+  if (!normalizedEntityId) {
+    throw new Error(`Invalid entity id: ${entityId}`);
+  }
+
+  const stateStore = new StateStore(config);
+  const entitiesState = options.entitiesState || await stateStore.loadEntities();
+  const sourcesState = options.sourcesState || await stateStore.loadSources();
+  const entityState = entitiesState[normalizedEntityId];
+
+  if (!entityState || entityState.sourceIds.length === 0) {
+    throw new Error(`No tracked sources registered for entity: ${normalizedEntityId}`);
+  }
+
+  const llm = new LLMClient(config);
+  const promptBuilder = new PromptBuilder();
+  const indexContent = await readIndexContent(config);
+  const currentEntityPagePath = entityState.entityPagePath || deriveEntityPagePath(normalizedEntityId);
+  const currentEntityContent = await readOptionalFile(path.join(config.wikiRoot, currentEntityPagePath));
+
+  const sourcePages = await Promise.all(
+    entityState.sourceIds
+      .map((sourceId) => sourcesState[sourceId])
+      .filter((record): record is SourceStateRecord => Boolean(record))
+      .map(async (record) => ({
+        sourceId: record.sourceId,
+        sourcePath: record.rawPath,
+        sourcePagePath: record.sourcePagePath,
+        content: await fs.readFile(path.join(config.wikiRoot, record.sourcePagePath), 'utf8'),
+      }))
+  );
+
+  const prompt = await promptBuilder.buildEntityRebuildPrompt({
+    entityId: normalizedEntityId,
+    entityTitle: entityState.title,
+    entityPagePath: currentEntityPagePath,
+    indexContent,
+    currentEntityContent,
+    sourcePages,
+  });
+
+  if (options.debug) {
+    console.log(prompt);
+  }
+
+  const response = await llm.chat([{ role: 'user', content: prompt }]);
+  if (!response) {
+    throw new Error(`No response from model while rebuilding entity ${normalizedEntityId}`);
+  }
+
+  const parsed = parseJsonResponse<EntityRebuildPlan>(response);
+  const nextContent = ensureTrailingNewline(parsed.content);
+  const previousContent = currentEntityContent ? ensureTrailingNewline(currentEntityContent) : '';
+  const changed = previousContent !== nextContent;
+
+  if (!options.dryRun) {
+    await safeWriteFile(path.join(config.wikiRoot, currentEntityPagePath), nextContent);
+    entitiesState[normalizedEntityId] = {
+      entityId: normalizedEntityId,
+      title: entityState.title,
+      entityPagePath: currentEntityPagePath,
+      sourceIds: entityState.sourceIds,
+      lastRebuildAt: new Date().toISOString(),
+    };
+    await stateStore.saveEntities(entitiesState);
+    await syncIndex(config);
+  }
+
+  return {
+    entityId: normalizedEntityId,
+    title: entityState.title,
+    entityPagePath: currentEntityPagePath,
+    sourceIds: [...entityState.sourceIds],
+    changed,
+  };
+}
+
 export async function syncIndex(config: Config): Promise<void> {
   const wikiDir = path.join(config.wikiRoot, config.paths.wiki);
   const sections = [
@@ -374,6 +526,35 @@ function syncConceptMembership(
   }
 }
 
+function syncEntityMembership(
+  entitiesState: Record<string, EntityStateRecord>,
+  sourceId: string,
+  nextEntities: TrackedConceptRef[]
+): void {
+  const nextIds = new Set(nextEntities.map(entity => entity.id));
+
+  for (const entity of Object.values(entitiesState)) {
+    if (!entity.sourceIds.includes(sourceId)) continue;
+    entity.sourceIds = entity.sourceIds.filter(id => id !== sourceId);
+    if (entity.sourceIds.length === 0 && !nextIds.has(entity.entityId)) {
+      delete entitiesState[entity.entityId];
+    }
+  }
+
+  for (const entity of nextEntities) {
+    const existing = entitiesState[entity.id];
+    const sourceIds = new Set(existing?.sourceIds || []);
+    sourceIds.add(sourceId);
+    entitiesState[entity.id] = {
+      entityId: entity.id,
+      title: entity.title,
+      entityPagePath: existing?.entityPagePath || deriveEntityPagePath(entity.id),
+      sourceIds: Array.from(sourceIds).sort(),
+      lastRebuildAt: existing?.lastRebuildAt,
+    };
+  }
+}
+
 async function inferPageTitle(filePath: string, fallback: string): Promise<string> {
   try {
     const content = await fs.readFile(filePath, 'utf8');
@@ -404,6 +585,16 @@ async function removeConceptIfUnowned(config: Config, conceptId: string, dryRun?
   if (!exists) return false;
   if (!dryRun) {
     await fs.remove(conceptPagePath);
+  }
+  return true;
+}
+
+async function removeEntityIfUnowned(config: Config, entityId: string, dryRun?: boolean): Promise<boolean> {
+  const entityPagePath = path.join(config.wikiRoot, deriveEntityPagePath(entityId));
+  const exists = await fs.pathExists(entityPagePath);
+  if (!exists) return false;
+  if (!dryRun) {
+    await fs.remove(entityPagePath);
   }
   return true;
 }

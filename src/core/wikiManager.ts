@@ -165,6 +165,7 @@ export class WikiManager {
       }
     }
 
+    await scanAndScore(path.join(wikiDir, 'entities'));
     await scanAndScore(path.join(wikiDir, 'concepts'));
     await scanAndScore(path.join(wikiDir, 'answers'));
 

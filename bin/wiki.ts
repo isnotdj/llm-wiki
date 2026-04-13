@@ -10,6 +10,7 @@ import lintCmd from '../src/commands/lint.ts';
 import listCmd from '../src/commands/list.ts';
 import refreshSourceCmd from '../src/commands/refreshSource.ts';
 import rebuildConceptCmd from '../src/commands/rebuildConcept.ts';
+import rebuildEntityCmd from '../src/commands/rebuildEntity.ts';
 
 const program = new Command();
 
@@ -76,6 +77,16 @@ async function main() {
     .option('--dry-run', 'Show logic plan without writing')
     .option('-d, --debug', 'Print debug payload sent to LLM')
     .action((concept, options) => rebuildConceptCmd(config, concept, options));
+
+  program
+    .command('rebuild-entity')
+    .description('Rebuild tracked entity pages from source pages')
+    .argument('[entity]', 'Specific entity id to rebuild')
+    .option('--all', 'Rebuild all tracked entities')
+    .option('-y, --yes', 'Skip confirmation')
+    .option('--dry-run', 'Show logic plan without writing')
+    .option('-d, --debug', 'Print debug payload sent to LLM')
+    .action((entity, options) => rebuildEntityCmd(config, entity, options));
 
   program
     .command('lint')

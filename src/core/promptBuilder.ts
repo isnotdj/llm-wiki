@@ -13,6 +13,7 @@ export class PromptBuilder {
   private lintTemplatePath: string;
   private sourceRefreshTemplatePath: string;
   private conceptRebuildTemplatePath: string;
+  private entityRebuildTemplatePath: string;
 
   constructor() {
     this.agentSchemaPath = path.resolve(__dirname, '../schemas/agent.md');
@@ -21,6 +22,7 @@ export class PromptBuilder {
     this.lintTemplatePath = path.resolve(__dirname, '../schemas/lint.prompt.hbs');
     this.sourceRefreshTemplatePath = path.resolve(__dirname, '../schemas/source_refresh.prompt.hbs');
     this.conceptRebuildTemplatePath = path.resolve(__dirname, '../schemas/concept_rebuild.prompt.hbs');
+    this.entityRebuildTemplatePath = path.resolve(__dirname, '../schemas/entity_rebuild.prompt.hbs');
   }
 
   async buildIngestPrompt(data: {
@@ -84,6 +86,23 @@ export class PromptBuilder {
   }): Promise<string> {
     const agentSystemPrompt = await fs.readFile(this.agentSchemaPath, 'utf8');
     const tplString = await fs.readFile(this.conceptRebuildTemplatePath, 'utf8');
+    const template = Handlebars.compile(tplString);
+    return template({
+      agentSystemPrompt,
+      ...data,
+    });
+  }
+
+  async buildEntityRebuildPrompt(data: {
+    entityId: string;
+    entityTitle: string;
+    entityPagePath: string;
+    indexContent: string;
+    currentEntityContent?: string;
+    sourcePages: Array<{ sourceId: string; sourcePath: string; sourcePagePath: string; content: string }>;
+  }): Promise<string> {
+    const agentSystemPrompt = await fs.readFile(this.agentSchemaPath, 'utf8');
+    const tplString = await fs.readFile(this.entityRebuildTemplatePath, 'utf8');
     const template = Handlebars.compile(tplString);
     return template({
       agentSystemPrompt,

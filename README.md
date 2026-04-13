@@ -170,11 +170,11 @@ Refresh mutable tracked raw source(s) into `wiki/sources/`.
 ```bash
 wiki refresh-source foo.md           # Refresh one tracked source
 wiki refresh-source --all            # Refresh all tracked sources
-wiki refresh-source foo.md --cascade # Also rebuild affected concepts
+wiki refresh-source foo.md --cascade # Also rebuild affected concepts + entities
 wiki refresh-source foo.md --dry-run # Preview without writing
 ```
 
-This workflow is meant for documents that change over time. It updates the source-owned page first, then optionally rebuilds every affected concept page from the full tracked source set.
+This workflow is meant for documents that change over time. It updates the source-owned page first, then optionally rebuilds every affected concept and entity page from the full tracked source set.
 
 ---
 
@@ -188,6 +188,19 @@ wiki rebuild-concept prompt-caching --dry-run
 ```
 
 This is the safe rebuild path for concepts shared by multiple sources. The page is regenerated from its full dependency set instead of being patched by one source in isolation.
+
+---
+
+### `wiki rebuild-entity [name]`
+Rebuild an entity page from all currently linked tracked sources.
+
+```bash
+wiki rebuild-entity claude-code
+wiki rebuild-entity --all
+wiki rebuild-entity claude-code --dry-run
+```
+
+This is the safe rebuild path for entity pages owned by multiple tracked sources.
 
 ---
 
@@ -259,6 +272,7 @@ wiki lint --fix            # Auto-apply fix proposals (creates stubs, updates in
 - [x] `.wikirc.yaml` configuration support
 - [x] `wiki refresh-source` for mutable tracked documents
 - [x] `wiki rebuild-concept` for safe multi-source concept regeneration
+- [x] `wiki rebuild-entity` for safe multi-source entity regeneration
 - [ ] `wiki log` command
 - [ ] Obsidian plugin integration
 - [ ] Support for embeddings / vector search when index grows large

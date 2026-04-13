@@ -66,10 +66,19 @@ export default async function refreshSourceCmd(
       if (result.affectedConceptIds.length > 0) {
         console.log(chalk.cyan(`Affected concepts: ${result.affectedConceptIds.join(', ')}`));
       }
+      if (result.affectedEntityIds.length > 0) {
+        console.log(chalk.magenta(`Affected entities: ${result.affectedEntityIds.join(', ')}`));
+      }
       if (options.cascade && result.rebuiltConcepts.length > 0) {
         for (const rebuilt of result.rebuiltConcepts) {
           const status = rebuilt.changed ? 'rebuilt' : 'unchanged';
           console.log(chalk.green(`  - ${rebuilt.conceptPagePath} (${status})`));
+        }
+      }
+      if (options.cascade && result.rebuiltEntities.length > 0) {
+        for (const rebuilt of result.rebuiltEntities) {
+          const status = rebuilt.changed ? 'rebuilt' : 'unchanged';
+          console.log(chalk.magenta(`  - ${rebuilt.entityPagePath} (${status})`));
         }
       }
       if (options.dryRun) {

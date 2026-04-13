@@ -1,0 +1,44 @@
+{{{agentSystemPrompt}}}
+
+---
+
+You are rebuilding an entity page from its complete set of tracked source pages.
+
+## Entity
+ID: {{{entityId}}}
+Title: {{{entityTitle}}}
+Target Page: {{{entityPagePath}}}
+
+## Current Wiki Index
+{{{indexContent}}}
+
+{{#if currentEntityContent}}
+## Existing Entity Page
+{{{currentEntityContent}}}
+{{/if}}
+
+## Source Pages
+{{#each sourcePages}}
+
+### Source: {{this.sourceId}}
+Raw Path: {{this.sourcePath}}
+Source Page Path: {{this.sourcePagePath}}
+{{{this.content}}}
+{{/each}}
+
+---
+
+## Task
+Write the COMPLETE markdown content for `{{{entityPagePath}}}` using ALL source pages above.
+
+Rules:
+- Rebuild the whole entity page from scratch.
+- Use the best title for the entity in the dominant source language.
+- Every factual claim must preserve raw-source citations already present in the source pages.
+- Focus on the concrete thing, person, tool, company, or named object represented by this entity.
+
+Output EXACTLY valid JSON:
+{
+  "content": "# {{{entityTitle}}}\n\nA full entity page with citations like [src: raw/tracked/example.md].",
+  "logMessage": "Rebuilt entity from tracked sources"
+}

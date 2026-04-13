@@ -16,12 +16,21 @@ export interface SourceStateRecord {
   lastRefreshAt: string;
   lastTransactionId: string;
   declaredConcepts: TrackedConceptRef[];
+  declaredEntities?: TrackedConceptRef[];
 }
 
 export interface ConceptStateRecord {
   conceptId: string;
   title: string;
   conceptPagePath: string;
+  sourceIds: string[];
+  lastRebuildAt?: string;
+}
+
+export interface EntityStateRecord {
+  entityId: string;
+  title: string;
+  entityPagePath: string;
   sourceIds: string[];
   lastRebuildAt?: string;
 }
@@ -34,17 +43,23 @@ interface ConceptsStateFile {
   concepts: Record<string, ConceptStateRecord>;
 }
 
+interface EntitiesStateFile {
+  entities: Record<string, EntityStateRecord>;
+}
+
 export class StateStore {
   private config: Config;
   private stateDir: string;
   private sourcesPath: string;
   private conceptsPath: string;
+  private entitiesPath: string;
 
   constructor(config: Config) {
     this.config = config;
     this.stateDir = path.join(config.wikiRoot, '.wiki', 'state');
     this.sourcesPath = path.join(this.stateDir, 'sources.json');
     this.conceptsPath = path.join(this.stateDir, 'concepts.json');
+    this.entitiesPath = path.join(this.stateDir, 'entities.json');
   }
 
   async ensureStateDir(): Promise<void> {
@@ -67,6 +82,15 @@ export class StateStore {
   async saveConcepts(concepts: Record<string, ConceptStateRecord>): Promise<void> {
     await this.ensureStateDir();
     await safeWriteFile(this.conceptsPath, `${JSON.stringify({ concepts }, null, 2)}\n`);
+  }
+
+  async loadEntities(): Promise<Record<string, EntityStateRecord>> {
+    return this.loadFile<EntitiesStateFile>(this.entitiesPath, { entities: {} }).then(data => data.entities);
+  }
+
+  async saveEntities(entities: Record<string, EntityStateRecord>): Promise<void> {
+    await this.ensureStateDir();
+    await safeWriteFile(this.entitiesPath, `${JSON.stringify({ entities }, null, 2)}\n`);
   }
 
   private async loadFile<T>(filePath: string, fallback: T): Promise<T> {

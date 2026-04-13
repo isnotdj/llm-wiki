@@ -29,15 +29,19 @@ Rules:
 - The page must describe only this raw source.
 - Write in the same language as the raw source.
 - Include citations using the exact raw source path: `[src: {{{sourcePath}}}]`.
-- Add YAML frontmatter with `source_path` and `concepts`.
-- The `concepts` field in frontmatter and the JSON output must describe the same concept list.
+- Add YAML frontmatter with `source_path`, `concepts`, and `entities`.
+- The `concepts` / `entities` fields in frontmatter and the JSON output must describe the same lists.
 - Concept IDs must be stable slugs suitable for filenames.
+- Entity IDs must be stable slugs suitable for filenames.
 
 Output EXACTLY valid JSON:
 {
-  "sourceContent": "---\nsource_path: \"{{{sourcePath}}}\"\nconcepts:\n  - prompt-caching\n---\n\n# Example Source\n\nSummary... [src: {{{sourcePath}}}]",
+  "sourceContent": "---\nsource_path: \"{{{sourcePath}}}\"\nconcepts:\n  - prompt-caching\nentities:\n  - claude-code\n---\n\n# Example Source\n\nSummary... [src: {{{sourcePath}}}]",
   "concepts": [
     { "id": "prompt-caching", "title": "Prompt Caching" }
   ],
-  "logMessage": "Refreshed tracked source and mapped concepts"
+  "entities": [
+    { "id": "claude-code", "title": "Claude Code" }
+  ],
+  "logMessage": "Refreshed tracked source and mapped concepts/entities"
 }
