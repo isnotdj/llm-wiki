@@ -1,0 +1,45 @@
+{{{agentSystemPrompt}}}
+
+---
+
+You are rebuilding a concept page from its complete set of tracked source pages.
+
+## Concept
+ID: {{{conceptId}}}
+Title: {{{conceptTitle}}}
+Target Page: {{{conceptPagePath}}}
+
+## Current Wiki Index
+{{{indexContent}}}
+
+{{#if currentConceptContent}}
+## Existing Concept Page
+{{{currentConceptContent}}}
+{{/if}}
+
+## Source Pages
+{{#each sourcePages}}
+
+### Source: {{this.sourceId}}
+Raw Path: {{this.sourcePath}}
+Source Page Path: {{this.sourcePagePath}}
+{{{this.content}}}
+{{/each}}
+
+---
+
+## Task
+Write the COMPLETE markdown content for `{{{conceptPagePath}}}` using ALL source pages above.
+
+Rules:
+- Rebuild the entire page from scratch; do not output partial patches.
+- Preserve the same language that best matches the source material.
+- Every factual claim must cite the underlying raw source paths already present in the source pages.
+- Prefer synthesis over duplication, but do not drop relevant facts that still appear in the source set.
+- The page title should be `# {{{conceptTitle}}}` unless the sources strongly justify a better same-language title.
+
+Output EXACTLY valid JSON:
+{
+  "content": "# {{{conceptTitle}}}\n\nA full concept page with citations like [src: raw/tracked/example.md].",
+  "logMessage": "Rebuilt concept from tracked sources"
+}

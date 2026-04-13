@@ -109,6 +109,8 @@ my-wiki/
 │   │   └── 2026/
 │   │       └── 04/
 │   │           └── 05-article-name.md
+│   ├── tracked/          ← Mutable sources that can be refreshed
+│   │   └── product-docs.md
 │   └── ingested/         ← Sources that have been processed
 │       └── 2026/
 │           └── 04/
@@ -162,6 +164,33 @@ All operations require user confirmation before being applied (unless `-y` is se
 
 ---
 
+### `wiki refresh-source [file]`
+Refresh mutable tracked raw source(s) into `wiki/sources/`.
+
+```bash
+wiki refresh-source foo.md           # Refresh one tracked source
+wiki refresh-source --all            # Refresh all tracked sources
+wiki refresh-source foo.md --cascade # Also rebuild affected concepts
+wiki refresh-source foo.md --dry-run # Preview without writing
+```
+
+This workflow is meant for documents that change over time. It updates the source-owned page first, then optionally rebuilds every affected concept page from the full tracked source set.
+
+---
+
+### `wiki rebuild-concept [name]`
+Rebuild a concept page from all currently linked tracked sources.
+
+```bash
+wiki rebuild-concept prompt-caching
+wiki rebuild-concept --all
+wiki rebuild-concept prompt-caching --dry-run
+```
+
+This is the safe rebuild path for concepts shared by multiple sources. The page is regenerated from its full dependency set instead of being patched by one source in isolation.
+
+---
+
 ### `wiki query [question]`
 Ask a question based on your wiki using a multi-step ReAct agent.
 
@@ -175,7 +204,7 @@ wiki query --no-save           # Skip the save prompt
 The agent works in a loop (up to 4 iterations):
 1. **Reads `index.md`** – understands what topics exist
 2. **Fetches concept pages** – reads the relevant pages
-3. **Dives into sources** – if a concept page cites `[src: raw/ingested/...]`, the agent reads the original source for deeper detail
+3. **Dives into sources** – if a concept page cites `[src: raw/ingested/...]` or `[src: raw/tracked/...]`, the agent reads the original source for deeper detail
 4. **Outputs a synthesised answer** in the same language as your question, with `[src: PageName]` citations
 
 Optionally save the answer back into the wiki as `wiki/answers/your-title.md`.
@@ -186,7 +215,7 @@ Optionally save the answer back into the wiki as `wiki/answers/your-title.md`.
 Browse the wiki without LLM costs.
 
 ```bash
-wiki list raw              # Show all untracked + ingested source files
+wiki list raw              # Show all untracked + tracked + ingested source files
 wiki list pages            # List all wiki concept pages
 wiki list orphans          # Find pages with no incoming links
 wiki list backlinks "Claude Code"   # Find all pages that link to a given page
@@ -228,6 +257,8 @@ wiki lint --fix            # Auto-apply fix proposals (creates stubs, updates in
 - [x] Automatic relevant-page discovery during ingest
 - [x] `jsonrepair` resilience for malformed LLM JSON
 - [x] `.wikirc.yaml` configuration support
+- [x] `wiki refresh-source` for mutable tracked documents
+- [x] `wiki rebuild-concept` for safe multi-source concept regeneration
 - [ ] `wiki log` command
 - [ ] Obsidian plugin integration
 - [ ] Support for embeddings / vector search when index grows large

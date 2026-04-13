@@ -11,12 +11,16 @@ export class PromptBuilder {
   private ingestTemplatePath: string;
   private queryAgentTemplatePath: string;
   private lintTemplatePath: string;
+  private sourceRefreshTemplatePath: string;
+  private conceptRebuildTemplatePath: string;
 
   constructor() {
     this.agentSchemaPath = path.resolve(__dirname, '../schemas/agent.md');
     this.ingestTemplatePath = path.resolve(__dirname, '../schemas/ingest.prompt.hbs');
     this.queryAgentTemplatePath = path.resolve(__dirname, '../schemas/query_agent.prompt.hbs');
     this.lintTemplatePath = path.resolve(__dirname, '../schemas/lint.prompt.hbs');
+    this.sourceRefreshTemplatePath = path.resolve(__dirname, '../schemas/source_refresh.prompt.hbs');
+    this.conceptRebuildTemplatePath = path.resolve(__dirname, '../schemas/concept_rebuild.prompt.hbs');
   }
 
   async buildIngestPrompt(data: {
@@ -52,5 +56,38 @@ export class PromptBuilder {
     const tplString = await fs.readFile(this.lintTemplatePath, 'utf8');
     const template = Handlebars.compile(tplString);
     return template(data);
+  }
+
+  async buildSourceRefreshPrompt(data: {
+    sourcePath: string;
+    sourcePagePath: string;
+    rawContent: string;
+    indexContent: string;
+    existingSourceContent?: string;
+  }): Promise<string> {
+    const agentSystemPrompt = await fs.readFile(this.agentSchemaPath, 'utf8');
+    const tplString = await fs.readFile(this.sourceRefreshTemplatePath, 'utf8');
+    const template = Handlebars.compile(tplString);
+    return template({
+      agentSystemPrompt,
+      ...data,
+    });
+  }
+
+  async buildConceptRebuildPrompt(data: {
+    conceptId: string;
+    conceptTitle: string;
+    conceptPagePath: string;
+    indexContent: string;
+    currentConceptContent?: string;
+    sourcePages: Array<{ sourceId: string; sourcePath: string; sourcePagePath: string; content: string }>;
+  }): Promise<string> {
+    const agentSystemPrompt = await fs.readFile(this.agentSchemaPath, 'utf8');
+    const tplString = await fs.readFile(this.conceptRebuildTemplatePath, 'utf8');
+    const template = Handlebars.compile(tplString);
+    return template({
+      agentSystemPrompt,
+      ...data,
+    });
   }
 }

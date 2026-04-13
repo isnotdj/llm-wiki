@@ -26,6 +26,7 @@ function canonicalize(name: string): string {
 export default async function listCmd(config: Config, type: string, target: string, options: any) {
   const wikiDir = path.join(config.wikiRoot, config.paths.wiki);
   const rawUntrackedDir = path.join(config.wikiRoot, config.paths.raw, 'untracked');
+  const rawTrackedDir = path.join(config.wikiRoot, config.paths.raw, 'tracked');
   const rawIngestedDir = path.join(config.wikiRoot, config.paths.raw, 'ingested');
 
   switch (type.toLowerCase()) {
@@ -35,6 +36,10 @@ export default async function listCmd(config: Config, type: string, target: stri
       const untracked = await scanMdFiles(rawUntrackedDir);
       console.log(chalk.yellow(`\nPending / Untracked (${untracked.length}):`));
       untracked.forEach(f => console.log(`  - ${path.relative(config.wikiRoot, f)}`));
+
+      const tracked = await scanMdFiles(rawTrackedDir);
+      console.log(chalk.cyan(`\nTracked / Refreshable (${tracked.length}):`));
+      tracked.forEach(f => console.log(`  - ${path.relative(config.wikiRoot, f)}`));
 
       const ingested = await scanMdFiles(rawIngestedDir);
       console.log(chalk.green(`\nIngested (${ingested.length}):`));

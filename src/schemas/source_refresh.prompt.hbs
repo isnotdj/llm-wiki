@@ -1,0 +1,43 @@
+{{{agentSystemPrompt}}}
+
+---
+
+You are refreshing a tracked source document into its dedicated source page.
+
+## Raw Source Material
+Path: {{{sourcePath}}}
+Target Source Page: {{{sourcePagePath}}}
+
+{{{rawContent}}}
+
+---
+
+## Current Wiki Index
+{{{indexContent}}}
+
+{{#if existingSourceContent}}
+## Existing Source Page
+{{{existingSourceContent}}}
+{{/if}}
+
+---
+
+## Task
+Create the COMPLETE markdown content for the source page at `{{{sourcePagePath}}}`.
+
+Rules:
+- The page must describe only this raw source.
+- Write in the same language as the raw source.
+- Include citations using the exact raw source path: `[src: {{{sourcePath}}}]`.
+- Add YAML frontmatter with `source_path` and `concepts`.
+- The `concepts` field in frontmatter and the JSON output must describe the same concept list.
+- Concept IDs must be stable slugs suitable for filenames.
+
+Output EXACTLY valid JSON:
+{
+  "sourceContent": "---\nsource_path: \"{{{sourcePath}}}\"\nconcepts:\n  - prompt-caching\n---\n\n# Example Source\n\nSummary... [src: {{{sourcePath}}}]",
+  "concepts": [
+    { "id": "prompt-caching", "title": "Prompt Caching" }
+  ],
+  "logMessage": "Refreshed tracked source and mapped concepts"
+}

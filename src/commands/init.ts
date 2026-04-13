@@ -13,9 +13,12 @@ export default async function initCmd(config: Config, options: { force?: boolean
   const spinner = ora('Initializing Wiki').start();
   try {
     const rawDir = path.resolve(config.wikiRoot, config.paths.raw, 'untracked');
+    const trackedRawDir = path.resolve(config.wikiRoot, config.paths.raw, 'tracked');
     const wikiDir = path.resolve(config.wikiRoot, config.paths.wiki);
+    const sourcesDir = path.join(wikiDir, 'sources');
+    const stateDir = path.join(config.wikiRoot, '.wiki', 'state');
 
-    const exists = await fs.pathExists(wikiDir) || await fs.pathExists(rawDir);
+    const exists = await fs.pathExists(wikiDir) || await fs.pathExists(rawDir) || await fs.pathExists(trackedRawDir);
     if (exists && !options.force) {
       spinner.stop();
       const { confirm } = await inquirer.prompt([{
@@ -33,7 +36,10 @@ export default async function initCmd(config: Config, options: { force?: boolean
 
     // Create directories
     await fs.ensureDir(rawDir);
+    await fs.ensureDir(trackedRawDir);
     await fs.ensureDir(wikiDir);
+    await fs.ensureDir(sourcesDir);
+    await fs.ensureDir(stateDir);
 
     // Copy core wiki templates explicitly
     const indexDest = path.join(wikiDir, 'index.md');

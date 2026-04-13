@@ -50,7 +50,8 @@ export class WikiManager {
             const possiblePaths = [
                 path.resolve(this.config.wikiRoot, t.original),
                 path.resolve(this.config.wikiRoot, this.config.paths.wiki, t.original),
-                path.resolve(this.config.wikiRoot, this.config.paths.raw, 'ingested', t.original)
+                path.resolve(this.config.wikiRoot, this.config.paths.raw, 'ingested', t.original),
+                path.resolve(this.config.wikiRoot, this.config.paths.raw, 'tracked', t.original)
             ];
             
             for (const p of possiblePaths) {
@@ -109,9 +110,10 @@ export class WikiManager {
       }
     }
 
-    // Search in wiki and raw/ingested
+    // Search in wiki and raw/ingested + raw/tracked
     await scanDir(path.join(this.config.wikiRoot, this.config.paths.wiki));
     await scanDir(path.join(this.config.wikiRoot, this.config.paths.raw, 'ingested'));
+    await scanDir(path.join(this.config.wikiRoot, this.config.paths.raw, 'tracked'));
 
     return results;
   }

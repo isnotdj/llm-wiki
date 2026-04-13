@@ -8,6 +8,8 @@ import ingestCmd from '../src/commands/ingest.ts';
 import queryCmd from '../src/commands/query.ts';
 import lintCmd from '../src/commands/lint.ts';
 import listCmd from '../src/commands/list.ts';
+import refreshSourceCmd from '../src/commands/refreshSource.ts';
+import rebuildConceptCmd from '../src/commands/rebuildConcept.ts';
 
 const program = new Command();
 
@@ -53,6 +55,27 @@ async function main() {
     .option('--no-save', 'Do not save answer')
     .option('-d, --debug', 'Print debug context info (e.g., accessed pages)')
     .action((question, options) => queryCmd(config, question, options));
+
+  program
+    .command('refresh-source')
+    .description('Refresh tracked raw documents into source pages')
+    .argument('[file]', 'Specific tracked raw file to refresh')
+    .option('--all', 'Refresh all tracked sources')
+    .option('--cascade', 'Also rebuild affected concepts')
+    .option('-y, --yes', 'Skip confirmation')
+    .option('--dry-run', 'Show logic plan without writing')
+    .option('-d, --debug', 'Print debug payload sent to LLM')
+    .action((file, options) => refreshSourceCmd(config, file, options));
+
+  program
+    .command('rebuild-concept')
+    .description('Rebuild tracked concept pages from source pages')
+    .argument('[concept]', 'Specific concept id to rebuild')
+    .option('--all', 'Rebuild all tracked concepts')
+    .option('-y, --yes', 'Skip confirmation')
+    .option('--dry-run', 'Show logic plan without writing')
+    .option('-d, --debug', 'Print debug payload sent to LLM')
+    .action((concept, options) => rebuildConceptCmd(config, concept, options));
 
   program
     .command('lint')
